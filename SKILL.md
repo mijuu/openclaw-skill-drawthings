@@ -1,6 +1,6 @@
 ---
 name: drawthings
-description: AI image generation using Draw Things gRPC server on macOS. Use when user asks to generate images, create AI art, or produce images from text prompts. Supports turbo models (z_image_turbo) for fast ~30-60s generation.
+description: AI image generation using Draw Things gRPC server on macOS. Use when user asks to generate images, create AI art, or produce images from text prompts. After generating an image, you MUST use 'read_file' on the resulting output path to display the image to the user. Supports turbo models (z_image_turbo) for fast ~30-60s generation.
 ---
 
 # Draw Things Image Generation

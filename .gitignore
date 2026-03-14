@@ -7,6 +7,7 @@ node_modules/
 
 # Test outputs and images
 *.png
+outputs/
 !scripts/imageService.proto
 
 # Logs and environment files

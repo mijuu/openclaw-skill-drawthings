@@ -293,7 +293,21 @@ async function main() {
     }
 
     const seed = options.seed === '0' ? Math.floor(Math.random() * 2**32) : parseInt(options.seed);
-    const outPath = options.output || path.join(process.cwd(), `output_${Date.now()}.png`);
+    
+    // Default to ./outputs/ directory in CWD
+    const outputDir = path.resolve(process.cwd(), 'outputs');
+    if (!fs.existsSync(outputDir)) {
+        fs.mkdirSync(outputDir, { recursive: true });
+    }
+    
+    const rawOutPath = options.output || path.join(outputDir, `output_${Date.now()}.png`);
+    const outPath = path.resolve(rawOutPath);
+
+    // Ensure parent directory of output file exists if user provided custom path
+    const parentDir = path.dirname(outPath);
+    if (!fs.existsSync(parentDir)) {
+        fs.mkdirSync(parentDir, { recursive: true });
+    }
 
     // Auto-detect or force protocol
     let useHttp = options.http;
