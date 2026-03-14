@@ -262,8 +262,8 @@ loadEnv();
 program
     .option('--prompt <text>', 'Prompt', 'a cat')
     .option('--negative-prompt <text>', 'Negative prompt', '')
-    .option('--width <px>', 'Width', '512')
-    .option('--height <px>', 'Height', '512')
+    .option('--width <px>', 'Width', '1024')
+    .option('--height <px>', 'Height', '576')
     .option('--steps <n>', 'Steps', '8')
     .option('--seed <n>', 'Seed', '0')
     .option('--guidance <f>', 'Guidance', '1.0')

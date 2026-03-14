@@ -116,8 +116,8 @@ node scripts/generate.js [options]
 Options:
   --prompt <text>           Text prompt (required)
   --negative-prompt <text>  Things to avoid
-  --width <px>              Width in pixels, multiple of 64 (default: 512)
-  --height <px>             Height in pixels, multiple of 64 (default: 512)
+  --width <px>              Width in pixels, multiple of 64 (default: 1024)
+  --height <px>             Height in pixels, multiple of 64 (default: 576)
   --steps <n>               Inference steps (default: 8)
   --seed <n>                Random seed, 0=random (default: 0)
   --guidance <f>            Guidance scale (default: 1.0)
