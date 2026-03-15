@@ -31,6 +31,9 @@ const slots = {
     id: 0, start_width: 1, start_height: 2, seed: 3, steps: 4, guidance_scale: 5, strength: 6, model: 7, sampler: 8,
     batch_count: 9, batch_size: 10,
     upscaler: 15,
+    loras: 20,
+    refiner_model: 28,
+    refiner_start: 38,
     upscaler_scale_factor: 63
 };
 
@@ -41,10 +44,25 @@ const samplerNames = {
     "unicpc-trailing": 17, "unicpc-ays": 18, "tcd-trailing": 19
 };
 
-function buildGenerationConfig(model, width, height, steps, seed, guidanceScale, sampler, upscaler = null, upscalerScaleFactor = 0) {
+function buildGenerationConfig(model, width, height, steps, seed, guidanceScale, sampler, upscaler = null, upscalerScaleFactor = 0, loras = [], refiner = null) {
     const builder = new flatbuffers.Builder(1024);
     const modelOff = builder.createString(model);
     const upscalerOff = upscaler ? builder.createString(upscaler) : null;
+    const refinerModelOff = (refiner && refiner.model) ? builder.createString(refiner.model) : null;
+
+    // Create LoRA objects if any
+    let loraOffsets = [];
+    if (loras && loras.length > 0) {
+        loras.forEach(l => {
+            const fileOff = builder.createString(l.file);
+            builder.startObject(3);
+            builder.addFieldOffset(0, fileOff, 0); // Slot 0: file
+            builder.addFieldFloat32(1, l.weight || 1.0, 1.0); // Slot 1: weight
+            builder.addFieldInt32(2, l.mode || 0, 0); // Slot 2: mode (0: Regular)
+            loraOffsets.push(builder.endObject());
+        });
+    }
+    const lorasVectorOff = loraOffsets.length > 0 ? builder.createVectorOfOffsets(loraOffsets) : null;
 
     builder.startObject(86);
     builder.addFieldInt64(slots.id, BigInt(0), BigInt(0));
@@ -60,6 +78,15 @@ function buildGenerationConfig(model, width, height, steps, seed, guidanceScale,
     if (upscalerOff) {
         builder.addFieldOffset(slots.upscaler, upscalerOff, 0);
         builder.addFieldInt8(slots.upscaler_scale_factor, upscalerScaleFactor, 0);
+    }
+
+    if (lorasVectorOff) {
+        builder.addFieldOffset(slots.loras, lorasVectorOff, 0);
+    }
+
+    if (refinerModelOff) {
+        builder.addFieldOffset(slots.refiner_model, refinerModelOff, 0);
+        builder.addFieldFloat32(slots.refiner_start, refiner.start || 0.7, 0.7);
     }
 
     const cfg = builder.endObject();
@@ -214,6 +241,16 @@ async function runGrpc(options, seed, outPath) {
     const upscaleFactor = parseInt(options.upscale || 1);
     const upscalerFile = upscaleFactor > 1 ? (options.upscaler || 'realesrgan_x4plus_f16.ckpt') : null;
 
+    // Parse LoRAs: --lora "name:weight"
+    const loras = [];
+    if (options.lora) {
+        const loraArgs = Array.isArray(options.lora) ? options.lora : [options.lora];
+        loraArgs.forEach(arg => {
+            const [file, weight] = arg.split(':');
+            loras.push({ file, weight: parseFloat(weight || 1.0), mode: 0 });
+        });
+    }
+
     const config = buildGenerationConfig(
         options.model, 
         parseInt(options.width), 
@@ -223,7 +260,9 @@ async function runGrpc(options, seed, outPath) {
         parseFloat(options.guidance), 
         samplerVal,
         upscalerFile,
-        upscaleFactor > 1 ? upscaleFactor : 0
+        upscaleFactor > 1 ? upscaleFactor : 0,
+        loras,
+        options.refinerModel ? { model: options.refinerModel, start: parseFloat(options.refinerStart || 0.7) } : null
     );
 
     const request = {
@@ -238,6 +277,12 @@ async function runGrpc(options, seed, outPath) {
 
     if (upscaleFactor > 1) {
         console.log(`Upscaling enabled: ${upscaleFactor}x using ${upscalerFile}`);
+    }
+    if (loras.length > 0) {
+        console.log(`LoRAs enabled: ${loras.map(l => `${l.file} (${l.weight})`).join(', ')}`);
+    }
+    if (options.refinerModel) {
+        console.log(`Refiner enabled: ${options.refinerModel} starting at ${options.refinerStart || 0.7}`);
     }
 
     console.log(`Generating via gRPC: "${options.prompt}"...`);
@@ -298,15 +343,18 @@ function loadEnv() {
 loadEnv();
 
 program
-    .option('--prompt <text>', 'Prompt', 'a cat')
-    .option('--negative-prompt <text>', 'Negative prompt', '')
-    .option('--width <px>', 'Width', '1024')
-    .option('--height <px>', 'Height', '576')
+    .option('--prompt <text>', 'Prompt')
+    .option('--negative-prompt <text>', 'Negative Prompt', '')
+    .option('--width <n>', 'Width', '1024')
+    .option('--height <n>', 'Height', '576')
     .option('--steps <n>', 'Steps', '8')
-    .option('--seed <n>', 'Seed', '0')
+    .option('--seed <n>', 'Seed (0 for random)', '0')
     .option('--guidance <f>', 'Guidance', '1.0')
     .option('--sampler <name>', 'Sampler', 'unicpc-trailing')
     .option('--model <filename>', 'Model', 'z_image_turbo_1.0_q6p.ckpt')
+    .option('--lora <name:weight>', 'Add LoRA (e.g. style:0.8). Can be used multiple times.', (val, memo) => { memo.push(val); return memo; }, [])
+    .option('--refiner-model <filename>', 'Refiner model filename')
+    .option('--refiner-start <f>', 'Refiner start percentage (0.0 - 1.0)', '0.7')
     .option('--upscale <factor>', 'Upscale factor (e.g. 2, 4)', '1')
     .option('--upscaler <filename>', 'Upscaler model filename', 'realesrgan_x4plus_f16.ckpt')
     .option('--output <path>', 'Output path')

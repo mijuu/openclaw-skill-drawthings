@@ -48,6 +48,7 @@ npm run server:stop
 Use `scripts/generate.js` for image generation. It automatically waits for the server to be ready.
 
 ### ⚠️ AI CRITICAL INSTRUCTIONS
+- **UPSCALING IS NOT A POST-PROCESS**: You **MUST** include the `--upscale` parameter at the **initial time of generation**. You cannot generate an image first and then "apply" an upscale later with this script. If the user wants a high-resolution or 4K image, you MUST include `--upscale 2` or `--upscale 4` in your very first command.
 - **NEVER truncate the prompt**: Provide the FULL text. No ellipses `...` or `…`.
 - **STRICT QUOTING**: 
   - Always use balanced quotes. For every opening quote (`'` or `"`), there MUST be a closing quote.
@@ -136,6 +137,17 @@ See `scripts/generate.js` for the Node.js CLI.
   - **Cinema (21:9)**: `--width 1344 --height 576`.
   - **Note**: Larger resolutions (e.g., >1024px) significantly increase generation time and memory usage.
 
+- **LoRAs (`--lora`)**:
+  - Format: `--lora "lora_filename.ckpt:weight"`.
+  - Multiple LoRAs: You can use this flag multiple times.
+  - Weight: Typically **0.1 to 1.0**.
+  - Example: `--lora "pixel_art:0.8" --lora "vibrant_colors:0.5"`.
+
+- **Refiner (`--refiner-model`, `--refiner-start`)**:
+  - **Refiner Model**: A second model used to refine details in the last steps (e.g., an SDXL refiner).
+  - **Refiner Start**: Percentage of total steps after which to switch to the refiner (Default: **0.7**, range 0.0-1.0).
+  - Example: `--model "sd_xl_base.ckpt" --refiner-model "sd_xl_refiner.ckpt" --refiner-start 0.8`.
+
 - **Upscaling (`--upscale`, `--upscaler`)**:
   - **Scale Factor**: Use `--upscale 2` or `--upscale 4`. **MANDATORY**: Only use integer factors (2 or 4).
   - **4K Goal**: To reach ~4K resolution, start with `--width 1024 --height 576` and use `--upscale 4`.
@@ -144,11 +156,11 @@ See `scripts/generate.js` for the Node.js CLI.
 
 ### Usage Examples with Advanced Parameters
 ```bash
-# High quality turbo generation with 4K upscale (Native)
-node scripts/generate.js --prompt "a majestic dragon in a crystal cave" --upscale 4
+# Generate high quality 4K art with a specific style (LoRA)
+node scripts/generate.js --prompt "a cybernetic owl" --lora "tech_style:0.7" --upscale 4
 
-# Portrait mode with 2x upscale
-node scripts/generate.js --prompt "cyberpunk street" --width 576 --height 1024 --upscale 2
+# Use SDXL with Refiner for maximum detail
+node scripts/generate.js --prompt "portrait of a wizard" --model "sd_xl_base.ckpt" --refiner-model "sd_xl_refiner.ckpt" --steps 30
 ```
 
 ## Available Models
