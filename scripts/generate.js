@@ -70,8 +70,8 @@ function buildGenerationConfig(model, width, height, steps, seed, guidanceScale,
     builder.addFieldInt16(slots.start_height, height / 64, 0);
     builder.addFieldInt32(slots.seed, seed, 0);
     builder.addFieldInt32(slots.steps, steps, 0);
-    builder.addFieldFloat32(slots.guidance_scale, guidanceScale, 0);
-    builder.addFieldFloat32(slots.strength, 1.0, 0);
+    builder.addFieldFloat32(slots.guidance_scale, guidanceScale, 0.0);
+    builder.addFieldFloat32(slots.strength, (options.strength !== undefined) ? parseFloat(options.strength) : 1.0, 0.0);
     builder.addFieldOffset(slots.model, modelOff, 0);
     builder.addFieldInt8(slots.sampler, sampler, 0);
     
@@ -92,6 +92,59 @@ function buildGenerationConfig(model, width, height, steps, seed, guidanceScale,
     const cfg = builder.endObject();
     builder.finish(cfg);
     return Buffer.from(builder.asUint8Array());
+}
+
+function encodeFloat16(f) {
+    const floatView = new Float32Array(1);
+    const int32View = new Uint32Array(floatView.buffer);
+    floatView[0] = f;
+    const x = int32View[0];
+    const bits = (x >> 16) & 0x8000;
+    let m = (x >> 12) & 0x07ff;
+    const e = (x >> 23) & 0xff;
+    if (e < 103) return bits;
+    if (e > 142) return bits | 0x7c00 | (e === 255 ? (x & 0x007fffff) ? 0x0200 : 0 : 0);
+    if (e < 113) {
+        m |= 0x0800;
+        return bits | (m >> (114 - e)) + ((m >> (113 - e)) & 1);
+    }
+    return bits | ((e - 112) << 10) | (m >> 1) + (m & 1);
+}
+
+function pngToTensor(pngPath) {
+    const data = fs.readFileSync(pngPath);
+    const png = PNG.sync.read(data);
+    const { width, height } = png;
+    const channels = 3; // RGB
+    
+    // Header constants for Draw Things (ccv_nnc_tensor_param_t)
+    const CCV_TENSOR_CPU_MEMORY = 0x1;
+    const CCV_TENSOR_FORMAT_NHWC = 0x02;
+    const CCV_16F = 0x20000;
+
+    const tensorBuffer = Buffer.alloc(68 + width * height * channels * 2);
+    // Write header (9 unsigned ints of 4 bytes each = 36 bytes, plus padding up to 68)
+    tensorBuffer.writeUInt32LE(0, 0); // auto
+    tensorBuffer.writeUInt32LE(CCV_TENSOR_CPU_MEMORY, 4);
+    tensorBuffer.writeUInt32LE(CCV_TENSOR_FORMAT_NHWC, 8);
+    tensorBuffer.writeUInt32LE(CCV_16F, 12);
+    tensorBuffer.writeUInt32LE(0, 16); // reserved
+    tensorBuffer.writeUInt32LE(1, 20); // N (batch size)
+    tensorBuffer.writeUInt32LE(height, 24);
+    tensorBuffer.writeUInt32LE(width, 28);
+    tensorBuffer.writeUInt32LE(channels, 32);
+
+    for (let y = 0; y < height; y++) {
+        for (let x = 0; x < width; x++) {
+            const pngIdx = (y * width + x) * 4;
+            const tensorIdx = 68 + (y * width + x) * (channels * 2);
+            for (let c = 0; c < channels; c++) {
+                const v = (png.data[pngIdx + c] / 255) * 2 - 1; // Normalize to -1..1
+                tensorBuffer.writeUInt16LE(encodeFloat16(v), tensorIdx + c * 2);
+            }
+        }
+    }
+    return tensorBuffer;
 }
 function decodeFloat16(h) {
     const s = (h >> 15) & 1, e = (h >> 10) & 0x1f, f = h & 0x3ff;
@@ -251,10 +304,26 @@ async function runGrpc(options, seed, outPath) {
         });
     }
 
+    let inputImageTensor = null;
+    let finalWidth = parseInt(options.width);
+    let finalHeight = parseInt(options.height);
+
+    if (options.image) {
+        if (!fs.existsSync(options.image)) {
+            throw new Error(`Input image not found: ${options.image}`);
+        }
+        console.log(`Loading input image: ${options.image}`);
+        inputImageTensor = pngToTensor(options.image);
+        // Extract width/height from tensor header if not explicitly set
+        if (!options.width || options.width === '1024') finalWidth = inputImageTensor.readUInt32LE(28);
+        if (!options.height || options.height === '576') finalHeight = inputImageTensor.readUInt32LE(24);
+        console.log(`Using input resolution: ${finalWidth}x${finalHeight}`);
+    }
+
     const config = buildGenerationConfig(
         options.model, 
-        parseInt(options.width), 
-        parseInt(options.height), 
+        finalWidth, 
+        finalHeight, 
         parseInt(options.steps), 
         seed, 
         parseFloat(options.guidance), 
@@ -272,7 +341,8 @@ async function runGrpc(options, seed, outPath) {
         scaleFactor: upscaleFactor, 
         chunked: true, 
         device: "LAPTOP", 
-        user: "OpenClaw"
+        user: "OpenClaw",
+        image: inputImageTensor
     };
 
     if (upscaleFactor > 1) {
@@ -355,6 +425,8 @@ program
     .option('--lora <name:weight>', 'Add LoRA (e.g. style:0.8). Can be used multiple times.', (val, memo) => { memo.push(val); return memo; }, [])
     .option('--refiner-model <filename>', 'Refiner model filename')
     .option('--refiner-start <f>', 'Refiner start percentage (0.0 - 1.0)', '0.7')
+    .option('--image <path>', 'Input image for Img2Img')
+    .option('--strength <f>', 'Denoising strength (0.0 - 1.0)', '0.7')
     .option('--upscale <factor>', 'Upscale factor (e.g. 2, 4)', '1')
     .option('--upscaler <filename>', 'Upscaler model filename', 'realesrgan_x4plus_f16.ckpt')
     .option('--output <path>', 'Output path')

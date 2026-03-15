@@ -148,6 +148,15 @@ See `scripts/generate.js` for the Node.js CLI.
   - **Refiner Start**: Percentage of total steps after which to switch to the refiner (Default: **0.7**, range 0.0-1.0).
   - Example: `--model "sd_xl_base.ckpt" --refiner-model "sd_xl_refiner.ckpt" --refiner-start 0.8`.
 
+- **Img2Img (`--image`, `--strength`)**:
+  - **Input Image**: Path to a local PNG image to use as a reference.
+  - **Strength**: Denoising strength (Default: **0.7**, range 0.0-1.0).
+    - **0.1-0.4 (Subtle)**: Enhances details, textures, and lighting while strictly preserving color and shape.
+    - **0.5-0.7 (Moderate)**: Allows for structural refinements but still strongly resists major semantic changes (like color).
+    - **0.8-0.9 (Significant)**: **MANDATORY** for changing colors, objects, or major styles. You **MUST** also increase `--guidance` to **5.0 - 8.0** for these tasks.
+    - **1.0 (Full)**: Completely ignores image structure, essentially a text-to-image with a specific noise initialization.
+  - Example (Color Change): `--image "red_apple.png" --prompt "a green apple" --strength 0.85 --guidance 6.0`.
+
 - **Upscaling (`--upscale`, `--upscaler`)**:
   - **Scale Factor**: Use `--upscale 2` or `--upscale 4`. **MANDATORY**: Only use integer factors (2 or 4).
   - **4K Goal**: To reach ~4K resolution, start with `--width 1024 --height 576` and use `--upscale 4`.
@@ -159,8 +168,8 @@ See `scripts/generate.js` for the Node.js CLI.
 # Generate high quality 4K art with a specific style (LoRA)
 node scripts/generate.js --prompt "a cybernetic owl" --lora "tech_style:0.7" --upscale 4
 
-# Use SDXL with Refiner for maximum detail
-node scripts/generate.js --prompt "portrait of a wizard" --model "sd_xl_base.ckpt" --refiner-model "sd_xl_refiner.ckpt" --steps 30
+# Use an existing image as reference (Img2Img)
+node scripts/generate.js --prompt "make it look like an oil painting" --image "input.png" --strength 0.6
 ```
 
 ## Available Models
