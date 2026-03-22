@@ -1,6 +1,6 @@
 {
   "name": "@mijuu/drawthings",
-  "version": "1.2.0",
+  "version": "1.2.1",
   "description": "An AI-native CLI interface for Draw Things. It manages the official gRPC server and provides a professional local image generation bridge for AI agents on macOS.",
   "main": "scripts/generate.js",
   "bin": {
