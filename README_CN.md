@@ -6,6 +6,41 @@
 
 该技能将 Draw Things 的专业级本地生成能力转化为“AI 原生 (AI-native)”的 CLI 接口，方便各类支持工具调用的 AI 代理直接使用。
 
+## 🤖 AI 代理集成 (AI Agent Integration)
+
+该工具包提供两种主要方式将你的 AI 代理连接到 Draw Things：
+
+### 1. MCP 协议 (Model Context Protocol) —— **强烈推荐**
+适用于 **Claude Desktop, Cursor, Zed** 等现代 AI 客户端。这会将 Draw Things 变成这些客户端中的“原生工具”。
+
+**全局安装**:
+```bash
+npm install -g @mijuu/drawthings
+```
+
+**Claude Desktop 配置**:
+在你的 `claude_desktop_config.json` 中添加：
+```json
+{
+  "mcpServers": {
+    "drawthings": {
+      "command": "dt-mcp"
+    }
+  }
+}
+```
+
+### 2. OpenClaw / Gemini CLI 技能
+对于 **OpenClaw** 用户，它作为一个标准技能运行：
+```bash
+cd ~/.openclaw/skills
+git clone https://github.com/mijuu/openclaw-skill-drawthings.git drawthings
+# 或通过 npm 安装
+mkdir drawthings && cd drawthings && npm install @mijuu/drawthings
+```
+
+---
+
 ## 🚀 核心特性
 
 - **集中式 CLI**：强大的 `dt-skill` 命令，集成了生成、配置和服务器管理功能。

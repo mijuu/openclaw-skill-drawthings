@@ -6,6 +6,41 @@ A high-performance Node.js interface for AI Agents (including [OpenClaw](https:/
 
 This skill makes the professional-grade local generation of Draw Things "AI-native" and easily controllable for any agent that supports CLI tool usage.
 
+## 🤖 AI Agent Integration
+
+This package provides two primary ways to connect your AI agents to Draw Things:
+
+### 1. Model Context Protocol (MCP)
+The recommended way for **Claude Desktop, Cursor, and Zed**. This turns Draw Things into a native "tool" for these AI clients.
+
+**Installation**:
+```bash
+npm install -g @mijuu/drawthings
+```
+
+**Claude Desktop Configuration**:
+Add this to your `claude_desktop_config.json`:
+```json
+{
+  "mcpServers": {
+    "drawthings": {
+      "command": "dt-mcp"
+    }
+  }
+}
+```
+
+### 2. OpenClaw / Gemini CLI Skill
+For **OpenClaw** users, it works as a standard skill:
+```bash
+cd ~/.openclaw/skills
+git clone https://github.com/mijuu/openclaw-skill-drawthings.git drawthings
+# Or install via npm
+mkdir drawthings && cd drawthings && npm install @mijuu/drawthings
+```
+
+---
+
 ## 🚀 Key Features
 
 - **Centralized CLI**: Powerful `dt-skill` command for generation, configuration, and server management.

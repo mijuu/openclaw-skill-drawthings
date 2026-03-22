@@ -402,167 +402,90 @@ async function runGrpc(options, seed, outPath) {
     });
 }
 
-program
-    .option('--prompt <text>', 'Prompt')
-    .option('--negative-prompt <text>', 'Negative Prompt', '')
-    .option('--width <n>', 'Width', '1024')
-    .option('--height <n>', 'Height', '576')
-    .option('--steps <n>', 'Steps', '8')
-    .option('--seed <n>', 'Seed (0 for random)', '0')
-    .option('--guidance <f>', 'Guidance', '1.0')
-    .option('--sampler <name>', 'Sampler', 'unicpc-trailing')
-    .option('--model <filename>', 'Model', 'z_image_turbo_1.0_q6p.ckpt')
-    .option('--lora <name:weight>', 'Add LoRA (e.g. style:0.8). Can be used multiple times.', (val, memo) => { memo.push(val); return memo; }, [])
-    .option('--refiner-model <filename>', 'Refiner model filename')
-    .option('--refiner-start <f>', 'Refiner start percentage (0.0 - 1.0)', '0.7')
-    .option('--image <path>', 'Input image for Img2Img')
-    .option('--strength <f>', 'Denoising strength (0.0 - 1.0)', '0.7')
-    .option('--upscale <factor>', 'Upscale factor (e.g. 2, 4)', '1')
-    .option('--upscaler <filename>', 'Upscaler model filename', 'realesrgan_x4plus_f16.ckpt')
-    .option('--output <path>', 'Output path')
-    .option('--addr <host:port>', 'Address')
-    .option('--http', 'Force HTTP')
-    .option('--grpc', 'Force gRPC')
-    .option('--tls', 'Enable TLS')
-    .option('--wait', 'Wait for server', true)
-    .option('--wait-timeout <sec>', 'Max wait', '60')
-    .option('--timeout <sec>', 'Total generation timeout', '600')
-    .option('--health', 'Check health')
-    .option('--list-models', 'List models')
-    .parse(process.argv);
+async function listModels(options) {
+    const packageDefinition = protoLoader.loadSync(path.join(__dirname, 'imageService.proto'), { keepCase: true });
+    const drawthings = grpc.loadPackageDefinition(packageDefinition);
+    const finalAddr = options.addr || config.get('DRAWTHINGS_SERVER_ADDR') || '127.0.0.1:7859';
+    const finalTls = options.tls || (config.get('DRAWTHINGS_USE_TLS') !== false);
+    let credentials = finalTls ? grpc.credentials.createSsl(fs.readFileSync(path.join(__dirname, 'drawthings-ca.pem'))) : grpc.credentials.createInsecure();
+    const client = new drawthings.ImageGenerationService(finalAddr, credentials);
+    
+    try {
+        const response = await new Promise((resolve, reject) => {
+            client.Echo({ name: 'list-models' }, (err, res) => {
+                if (err) reject(err);
+                else resolve(res);
+            });
+        });
 
-const options = program.opts();
-
-async function main() {
-    // Set global timeout
-    const timeoutSec = parseInt(options.timeout || 600);
-    const totalTimeout = timeoutSec * 1000;
-    const timeoutHandle = setTimeout(() => {
-        console.error(`\nError: Generation timed out after ${timeoutSec} seconds.`);
-        process.exit(1);
-    }, totalTimeout);
-
-    // Add a simple heartbeat for long-running tasks (like upscale)
-    const heartbeat = setInterval(() => {
-        if (!options.health && !options.listModels) {
-            process.stdout.write('... still working ...\n');
+        const readableOverride = {};
+        if (response.override) {
+            for (const [key, value] of Object.entries(response.override)) {
+                if (Buffer.isBuffer(value)) {
+                    const str = value.toString('utf8');
+                    try { readableOverride[key] = JSON.parse(str); }
+                    catch (e) { readableOverride[key] = str; }
+                } else {
+                    readableOverride[key] = value;
+                }
+            }
         }
-    }, 30000); // Every 30s
 
-    const cleanup = (code = 0) => {
-        clearTimeout(timeoutHandle);
-        clearInterval(heartbeat);
-        process.exit(code);
-    };
+        const upscalerKeywords = ['upscale', 'realesrgan', 'esrgan', 'hat', 'swin', 'swinir', 'nmkd', '4x', '2x'];
+        const upscalers = [];
+        const models = [];
+        const others = [];
 
-    // Show help if no prompt and not checking health or listing models
-    if (!options.prompt && !options.health && !options.listModels) {
-        program.help();
+        if (readableOverride.models && Array.isArray(readableOverride.models)) {
+            readableOverride.models.forEach(m => models.push(m.name ? `${m.name} (${m.file})` : (m.file || m)));
+        }
+        if (readableOverride.upscalers && Array.isArray(readableOverride.upscalers)) {
+            readableOverride.upscalers.forEach(u => upscalers.push(u.name ? `${u.name} (${u.file})` : (u.file || u)));
+        }
+
+        if (response.files) {
+            response.files.forEach(f => {
+                const fl = f.toLowerCase();
+                if (upscalerKeywords.some(kw => fl.includes(kw))) {
+                    if (!upscalers.some(u => u.includes(f))) upscalers.push(f);
+                } else if (fl.endsWith('.ckpt') || fl.endsWith('.safetensors')) {
+                    if (!models.some(m => m.includes(f))) models.push(f);
+                } else {
+                    others.push(f);
+                }
+            });
+        }
+        return { models: models.sort(), upscalers: upscalers.sort(), others: others.sort() };
+    } catch (err) {
+        throw new Error(`Failed to list models: ${err.message}`);
     }
+}
 
-    console.log('DEBUG OPTIONS:', options);
+async function checkHealth(options) {
+    const packageDefinition = protoLoader.loadSync(path.join(__dirname, 'imageService.proto'), { keepCase: true });
+    const drawthings = grpc.loadPackageDefinition(packageDefinition);
+    const finalAddr = options.addr || config.get('DRAWTHINGS_SERVER_ADDR') || '127.0.0.1:7859';
+    const finalTls = options.tls || (config.get('DRAWTHINGS_USE_TLS') !== false);
+    let credentials = finalTls ? grpc.credentials.createSsl(fs.readFileSync(path.join(__dirname, 'drawthings-ca.pem'))) : grpc.credentials.createInsecure();
+    const client = new drawthings.ImageGenerationService(finalAddr, credentials);
+    
+    return new Promise((resolve, reject) => {
+        client.Echo({ name: 'health-check' }, (err, res) => {
+            if (err) reject(err);
+            else resolve(res);
+        });
+    });
+}
+
+async function generate(options) {
     const finalAddr = options.addr || config.get('DRAWTHINGS_SERVER_ADDR') || '127.0.0.1:7859';
     options.addr = finalAddr;
 
-    // --- Truncation Check ---
     if (options.prompt && (options.prompt.endsWith('...') || options.prompt.endsWith('…'))) {
-        console.error(`ERROR: The prompt appears to be truncated ("${options.prompt}").`);
-        console.error("AI: You MUST provide the FULL prompt text. DO NOT use ellipses or abbreviations.");
-        process.exit(1);
+        throw new Error(`The prompt appears to be truncated ("${options.prompt}"). You MUST provide the FULL prompt text.`);
     }
 
-    if (options.health || options.listModels) {
-        const packageDefinition = protoLoader.loadSync(path.join(__dirname, 'imageService.proto'), { keepCase: true });
-        const drawthings = grpc.loadPackageDefinition(packageDefinition);
-        const finalTls = options.tls || (config.get('DRAWTHINGS_USE_TLS') !== false);
-        let credentials = finalTls ? grpc.credentials.createSsl(fs.readFileSync(path.join(__dirname, 'drawthings-ca.pem'))) : grpc.credentials.createInsecure();
-        const client = new drawthings.ImageGenerationService(finalAddr, credentials);
-        
-        try {
-            const response = await new Promise((resolve, reject) => {
-                const echoName = 'health-check'; 
-                client.Echo({ name: echoName }, (err, res) => {
-                    if (err) reject(err);
-                    else resolve(res);
-                });
-            });
-
-            // 1. Decode Overrides (Used by both health and listModels)
-            const readableOverride = {};
-            if (response.override) {
-                for (const [key, value] of Object.entries(response.override)) {
-                    if (Buffer.isBuffer(value)) {
-                        const str = value.toString('utf8');
-                        try { readableOverride[key] = JSON.parse(str); }
-                        catch (e) { readableOverride[key] = str; }
-                    } else {
-                        readableOverride[key] = value;
-                    }
-                }
-            }
-
-            if (options.listModels) {
-                const upscalerKeywords = ['upscale', 'realesrgan', 'esrgan', 'hat', 'swin', 'swinir', 'nmkd', '4x', '2x'];
-                const upscalers = [];
-                const models = [];
-                const others = [];
-
-                // Extract from metadata (Active Models)
-                if (readableOverride.models && Array.isArray(readableOverride.models)) {
-                    readableOverride.models.forEach(m => models.push(m.name ? `${m.name} (${m.file})` : (m.file || m)));
-                }
-                if (readableOverride.upscalers && Array.isArray(readableOverride.upscalers)) {
-                    readableOverride.upscalers.forEach(u => upscalers.push(u.name ? `${u.name} (${u.file})` : (u.file || u)));
-                }
-
-                // Extract from file list (Raw Files)
-                if (response.files) {
-                    response.files.forEach(f => {
-                        const fl = f.toLowerCase();
-                        if (upscalerKeywords.some(kw => fl.includes(kw))) {
-                            if (!upscalers.some(u => u.includes(f))) upscalers.push(f);
-                        } else if (fl.endsWith('.ckpt') || fl.endsWith('.safetensors')) {
-                            if (!models.some(m => m.includes(f))) models.push(f);
-                        } else {
-                            others.push(f);
-                        }
-                    });
-                }
-
-                console.log('--- Available Models ---');
-                if (models.length > 0) {
-                    models.sort().forEach(m => console.log(`[Model] ${m}`));
-                } else {
-                    console.log('(No models found)');
-                }
-
-                console.log('\n--- Detected Upscaler Models ---');
-                if (upscalers.length > 0) {
-                    upscalers.sort().forEach(u => console.log(`[Upscaler] ${u}`));
-                } else {
-                    console.log('(No specific upscaler models found)');
-                }
-
-                if (others.length > 0) {
-                    console.log('\n--- Other Files ---');
-                    others.sort().slice(0, 50).forEach(f => console.log(`- ${f}`));
-                    if (others.length > 50) console.log(`... and ${others.length - 50} more files.`);
-                }
-            } else {
-                console.log('Server is healthy:', response.message);
-                if (Object.keys(readableOverride).length > 0) {
-                    console.log('Server Overrides:', JSON.stringify(readableOverride, null, 2));
-                }
-            }
-            cleanup(0);
-        } catch (err) {
-            console.error(`Health check failed (${finalTls ? 'TLS' : 'Insecure'}): ${err.message}`);
-            cleanup(1);
-        }
-        return; // Ensure we don't fall through to generation
-    }
-
-    const seed = options.seed === '0' ? Math.floor(Math.random() * 2**32) : parseInt(options.seed);
+    const seed = options.seed === '0' || !options.seed ? Math.floor(Math.random() * 2**32) : parseInt(options.seed);
     const outputDir = path.resolve(process.cwd(), 'outputs');
     if (!fs.existsSync(outputDir)) fs.mkdirSync(outputDir, { recursive: true });
     
@@ -570,19 +493,93 @@ async function main() {
     if (!fs.existsSync(path.dirname(outPath))) fs.mkdirSync(path.dirname(outPath), { recursive: true });
 
     let useHttp = options.http || (!options.grpc && finalAddr.includes('7860'));
-    options.addr = finalAddr;
-
-    try {
-        log(`Generating image - Prompt: "${options.prompt}", Steps: ${options.steps}, Seed: ${seed}, Model: ${options.model}`);
-        const result = await (useHttp ? runHttp(options, seed, outPath) : runGrpc(options, seed, outPath));
-        console.log(`Image saved to: ${result}`);
-        log(`Success: Image saved to ${result}`);
-        cleanup(0);
-    } catch (err) {
-        console.error(`Generation failed: ${err.message}`);
-        log(`Error: Generation failed - ${err.message}`);
-        cleanup(1);
-    }
+    
+    log(`Generating image - Prompt: "${options.prompt}", Steps: ${options.steps}, Seed: ${seed}, Model: ${options.model}`);
+    const result = await (useHttp ? runHttp(options, seed, outPath) : runGrpc(options, seed, outPath));
+    return { path: result, seed: seed };
 }
 
-main();
+module.exports = {
+    generate,
+    listModels,
+    checkHealth,
+    slots,
+    samplerNames
+};
+
+if (require.main === module) {
+    program
+        .option('--prompt <text>', 'Prompt')
+        .option('--negative-prompt <text>', 'Negative Prompt', '')
+        .option('--width <n>', 'Width', '1024')
+        .option('--height <n>', 'Height', '576')
+        .option('--steps <n>', 'Steps', '8')
+        .option('--seed <n>', 'Seed (0 for random)', '0')
+        .option('--guidance <f>', 'Guidance', '1.0')
+        .option('--sampler <name>', 'Sampler', 'unicpc-trailing')
+        .option('--model <filename>', 'Model', 'z_image_turbo_1.0_q6p.ckpt')
+        .option('--lora <name:weight>', 'Add LoRA (e.g. style:0.8). Can be used multiple times.', (val, memo) => { memo.push(val); return memo; }, [])
+        .option('--refiner-model <filename>', 'Refiner model filename')
+        .option('--refiner-start <f>', 'Refiner start percentage (0.0 - 1.0)', '0.7')
+        .option('--image <path>', 'Input image for Img2Img')
+        .option('--strength <f>', 'Denoising strength (0.0 - 1.0)', '0.7')
+        .option('--upscale <factor>', 'Upscale factor (e.g. 2, 4)', '1')
+        .option('--upscaler <filename>', 'Upscaler model filename', 'realesrgan_x4plus_f16.ckpt')
+        .option('--output <path>', 'Output path')
+        .option('--addr <host:port>', 'Address')
+        .option('--http', 'Force HTTP')
+        .option('--grpc', 'Force gRPC')
+        .option('--tls', 'Enable TLS')
+        .option('--wait', 'Wait for server', true)
+        .option('--wait-timeout <sec>', 'Max wait', '60')
+        .option('--timeout <sec>', 'Total generation timeout', '600')
+        .option('--health', 'Check health')
+        .option('--list-models', 'List models')
+        .parse(process.argv);
+
+    const options = program.opts();
+
+    async function main() {
+        const timeoutSec = parseInt(options.timeout || 600);
+        const timeoutHandle = setTimeout(() => {
+            console.error(`\nError: Generation timed out after ${timeoutSec} seconds.`);
+            process.exit(1);
+        }, timeoutSec * 1000);
+
+        const heartbeat = setInterval(() => {
+            if (!options.health && !options.listModels) process.stdout.write('... still working ...\n');
+        }, 30000);
+
+        const cleanup = (code = 0) => {
+            clearTimeout(timeoutHandle);
+            clearInterval(heartbeat);
+            process.exit(code);
+        };
+
+        if (!options.prompt && !options.health && !options.listModels) program.help();
+
+        try {
+            if (options.health) {
+                const res = await checkHealth(options);
+                console.log('Server is healthy:', res.message);
+                cleanup(0);
+            } else if (options.listModels) {
+                const res = await listModels(options);
+                console.log('--- Available Models ---');
+                res.models.forEach(m => console.log(`[Model] ${m}`));
+                console.log('\n--- Detected Upscaler Models ---');
+                res.upscalers.forEach(u => console.log(`[Upscaler] ${u}`));
+                cleanup(0);
+            } else {
+                const result = await generate(options);
+                console.log(`Image saved to: ${result.path} (Seed: ${result.seed})`);
+                cleanup(0);
+            }
+        } catch (err) {
+            console.error(`Operation failed: ${err.message}`);
+            cleanup(1);
+        }
+    }
+    main();
+}
+
