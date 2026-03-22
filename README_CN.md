@@ -10,8 +10,8 @@
 
 该工具包提供两种主要方式将你的 AI 代理连接到 Draw Things：
 
-### 1. MCP 协议 (Model Context Protocol) —— **强烈推荐**
-适用于 **Claude Desktop, Cursor, Zed** 等现代 AI 客户端。这会将 Draw Things 变成这些客户端中的“原生工具”。
+### 1. MCP 协议 (Model Context Protocol) —— **最佳实践 (The Golden Path)**
+适用于 **Claude Desktop, Cursor, Zed** 等现代 AI 客户端。这会将 Draw Things 变成这些客户端中的“原生工具”。**如果你的 AI 代理支持 MCP，这是进行图像生成的首选且唯一的接口。**
 
 **全局安装**:
 ```bash

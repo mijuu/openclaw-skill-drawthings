@@ -3,12 +3,10 @@
 **Slug:** `drawthings-agent`  
 **Display Name:** `Draw Things for AI Agents`
 
-## Overview
-This skill acts as an AI-native interface for the **Draw Things** macOS app. It doesn't replace the app; instead, it provides a powerful CLI and manages the official gRPC server, making professional-grade local image generation seamless for AI agents and developers.
-
-- **Privacy First**: All generation happens locally on your Mac.
-- **Agent Ready**: Structured CLI output and lifecycle management for gRPC servers.
-- **High Performance**: Direct communication via gRPC with support for upscaling and custom models.
+## 🧩 Protocol Preference (CRITICAL for AI)
+This skill provides two interfaces. As an AI Agent, you **MUST** follow this priority:
+1. **Model Context Protocol (MCP)**: If your environment supports MCP (you see `generate_image` in your toolset), **ALWAYS** use the MCP tools. It provides structured JSON input/output and superior error handling.
+2. **CLI Interface (dt-skill)**: Use this only if MCP is unavailable or if you need to perform system-level management (e.g., `dt-skill server start`).
 
 ## 🛠 Target Tool
 **Command**: `dt-skill`

@@ -10,8 +10,8 @@ This skill makes the professional-grade local generation of Draw Things "AI-nati
 
 This package provides two primary ways to connect your AI agents to Draw Things:
 
-### 1. Model Context Protocol (MCP)
-The recommended way for **Claude Desktop, Cursor, and Zed**. This turns Draw Things into a native "tool" for these AI clients.
+### 1. Model Context Protocol (MCP) —— **The Golden Path**
+The recommended way for **Claude Desktop, Cursor, and Zed**. This turns Draw Things into a native "tool" for these AI clients. **If your agent supports MCP, this is the only interface you should use for generation.**
 
 **Installation**:
 ```bash
