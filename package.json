@@ -9,11 +9,11 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/mijuu/openclaw-skill-drawthings.git"
+    "url": "git+https://github.com/mijuu/drawthings-agent.git"
   },
-  "homepage": "https://github.com/mijuu/openclaw-skill-drawthings#readme",
+  "homepage": "https://github.com/mijuu/drawthings-agent#readme",
   "bugs": {
-    "url": "https://github.com/mijuu/openclaw-skill-drawthings/issues"
+    "url": "https://github.com/mijuu/drawthings-agent/issues"
   },
   "scripts": {
     "dt": "node scripts/cli.js",
