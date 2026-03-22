@@ -55,6 +55,7 @@ mkdir drawthings && cd drawthings && npm install @mijuu/drawthings
 
 - **macOS**: Draw Things is a macOS-native application.
 - **Draw Things App**: Installed with models downloaded.
+- **gRPCServerCLI** (Optional for headless mode): Download from [Official Releases](https://github.com/drawthingsai/draw-things-community/releases).
 - **Node.js**: Version 16 or higher.
 - **CRITICAL SETTING**: In Draw Things settings, **DISABLE "Response Compression"** (also known as FPY). This script does not support FPY compressed tensors.
 

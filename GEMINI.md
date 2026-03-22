@@ -15,7 +15,7 @@
 
 This skill controls an external server. **Do not move or copy** these heavy assets into the skill directory.
 
--   **Server Binary**: `[Path to your Draw Things gRPC server binary, e.g., /path/to/gRPCServerCLI-macOS]`
+-   **Server Binary**: `[Path to your Draw Things gRPC server binary, e.g., /path/to/gRPCServerCLI-macOS]` (Download from: https://github.com/drawthingsai/draw-things-community/releases)
 -   **Models Directory**: `[Path to your Draw Things models, e.g., ~/Library/Containers/com.liuliu.draw-things/Data/Documents/Models]`
 -   **Default Address**: `127.0.0.1:7859` (No TLS, no compression).
 

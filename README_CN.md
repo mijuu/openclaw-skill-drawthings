@@ -55,8 +55,9 @@ mkdir drawthings && cd drawthings && npm install @mijuu/drawthings
 
 - **macOS**：Draw Things 是一款 macOS 原生应用。
 - **Draw Things App**：已安装并下载了所需的模型。
+- **gRPCServerCLI** (可选，用于后台运行模式)：从 [官方 Release 页面](https://github.com/drawthingsai/draw-things-community/releases) 下载。
 - **Node.js**：版本 16 或更高。
-- **重要设置**：在 Draw Things 的设置中，**禁用 "Response Compression" (响应压缩)** (也称为 FPY)。该脚本目前不支持 FPY 压缩的张量。
+- **重要设置**：在 Draw Things 的设置中，**禁用 "Response Compression" (响应压缩)** (也称为 FPY)。该脚本目前不支持 FPY 压缩的张量.
 
 ## 📦 安装说明
 
