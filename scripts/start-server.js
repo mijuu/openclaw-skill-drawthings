@@ -7,54 +7,34 @@
 const { spawn, execSync } = require('child_process');
 const fs = require('fs');
 const path = require('path');
+const config = require('./config');
 
-// Basic .env parser
-function loadEnv() {
-    const envPath = path.join(__dirname, '..', '.env');
-    if (!fs.existsSync(envPath)) {
-        console.warn('Warning: .env file not found. Using defaults.');
-        return;
-    }
-    const content = fs.readFileSync(envPath, 'utf8');
-    content.split(/\r?\n/).forEach(line => {
-        line = line.trim();
-        if (!line || line.startsWith('#')) return;
-        const [key, ...valueParts] = line.split('=');
-        if (key && valueParts.length > 0) {
-            const value = valueParts.join('=').trim().replace(/^["'](.*)["']$/, '$1');
-            process.env[key.trim()] = value;
-        }
-    });
-}
-
-loadEnv();
-
-const serverPath = process.env.DRAWTHINGS_SERVER_PATH;
-const modelsPath = process.env.DRAWTHINGS_MODELS_PATH;
-const addrStr = process.env.DRAWTHINGS_SERVER_ADDR || '127.0.0.1:7859';
+const serverPath = config.get('DRAWTHINGS_SERVER_PATH');
+const modelsPath = config.get('DRAWTHINGS_MODELS_PATH');
+const addrStr = config.get('DRAWTHINGS_SERVER_ADDR') || '127.0.0.1:7859';
 const addr = addrStr.split(':');
+const useTls = config.get('DRAWTHINGS_USE_TLS') !== false;
 
 if (!serverPath || !modelsPath) {
-    console.error('Error: DRAWTHINGS_SERVER_PATH or DRAWTHINGS_MODELS_PATH not configured in .env');
+    console.error('Error: DRAWTHINGS_SERVER_PATH or DRAWTHINGS_MODELS_PATH not configured.');
+    console.log('Please run "dt-skill doctor" for detailed configuration instructions.');
     process.exit(1);
-}
-
-// Check if server is already running
-try {
-    const check = execSync('ps aux | grep gRPCServerCLI-macOS | grep -v grep').toString();
-    if (check.trim()) {
-        console.log(`Draw Things server is already running. (Address: ${addrStr})`);
-        console.log('Use "npm run server:stop" first if you want to restart with new settings.');
-        process.exit(0);
-    }
-} catch (e) {
-    // No process found, continue
 }
 
 const finalServerPath = serverPath.replace(/^~/, process.env.HOME || '');
 const finalModelsPath = modelsPath.replace(/^~/, process.env.HOME || '');
-// Default to true unless explicitly set to 'false'
-const useTls = process.env.DRAWTHINGS_USE_TLS !== 'false';
+
+if (!fs.existsSync(finalServerPath)) {
+    console.error(`Error: Draw Things server binary NOT FOUND at: ${finalServerPath}`);
+    console.log('Please verify your path or run "dt-skill doctor"');
+    process.exit(1);
+}
+
+if (!fs.existsSync(finalModelsPath)) {
+    console.error(`Error: Models directory NOT FOUND at: ${finalModelsPath}`);
+    console.log('Please verify your path or run "dt-skill doctor"');
+    process.exit(1);
+}
 
 const logFile = path.join(__dirname, '..', 'logs', 'server.log');
 const logDir = path.dirname(logFile);
@@ -65,7 +45,7 @@ const out = fs.openSync(logFile, 'a');
 const err = fs.openSync(logFile, 'a');
 
 const log = (msg) => {
-    const timestamp = new Date().toISOString();
+    const timestamp = new Date().toLocaleString();
     const formattedMsg = `[${timestamp}] ${msg}\n`;
     process.stdout.write(formattedMsg);
     fs.writeSync(out, formattedMsg);

@@ -45,7 +45,12 @@ npm run server:stop
 
 ## Generation Task
 
-Use `scripts/generate.js` for image generation. It automatically waits for the server to be ready.
+Use `scripts/generate.js` for image generation. It automatically waits for the server to be ready and provides real-time progress updates.
+
+### Progress and Timeouts
+- **Real-time Updates**: The script provides live sampling progress (e.g., `Sampling step: 4/8...`) and status updates for encoding/decoding.
+- **Inactivity Watchdog**: If the server is silent for more than 15 seconds (e.g., while loading a model or processing a large upscale), the script will print `... still working ...` to confirm it hasn't hung.
+- **Generation Timeout**: Use `--timeout <sec>` to set a maximum duration for the generation (Default: **300s**). If generation exceeds this limit, the process will terminate safely.
 
 ### ⚠️ AI CRITICAL INSTRUCTIONS
 - **UPSCALING IS NOT A POST-PROCESS**: You **MUST** include the `--upscale` parameter at the **initial time of generation**. You cannot generate an image first and then "apply" an upscale later with this script. If the user wants a high-resolution or 4K image, you MUST include `--upscale 2` or `--upscale 4` in your very first command.
@@ -67,22 +72,24 @@ Use `scripts/generate.js` for image generation. It automatically waits for the s
 
 Before using this skill, you must configure the paths to your Draw Things gRPC server and models.
 
-1.  Copy `.env.example` to `.env`:
-    ```bash
-    cp .env.example .env
-    ```
-2.  Open `.env` and fill in the paths:
-    - `DRAWTHINGS_SERVER_PATH`: Full path to the `gRPCServerCLI-macOS` binary.
-    - `DRAWTHINGS_MODELS_PATH`: Full path to your models directory.
+```bash
+# Interactive setup
+npm run setup -- --server-path "/path/to/gRPCServerCLI-macOS" --models-path "~/Library/Containers/com.liuliu.draw-things/Data/Documents/Models"
+```
+
+Settings are stored centrally in `~/.drawthings-skill/config.json`. You do not need to edit any files inside the skill directory.
 
 ## Quick Start
 
 ```bash
-# Start the server
-npm run start-server
+# 1. Setup paths (one-time)
+npm run setup -- --server-path "/Applications/Draw Things.app/Contents/MacOS/gRPCServerCLI-macOS" --models-path "~/Library/Containers/com.liuliu.draw-things/Data/Documents/Models"
 
-# Generate an image (in a new terminal)
-node scripts/generate.js --prompt "a cat sitting on a windowsill" --output cat.png
+# 2. Start the server
+npm run server:start
+
+# 3. Generate an image
+npm run generate -- --prompt "a cat sitting on a windowsill" --output cat.png
 ```
 
 ## Server Setup

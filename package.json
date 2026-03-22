@@ -4,16 +4,16 @@
   "description": "Draw Things AI image generation for OpenClaw",
   "main": "scripts/generate.js",
   "bin": {
-    "dtgen": "./scripts/generate.js"
+    "dt-skill": "./scripts/cli.js"
   },
   "scripts": {
-    "generate": "node scripts/generate.js",
-    "health": "node scripts/generate.js --health",
-    "models": "node scripts/generate.js --list-models",
-    "server:start": "node scripts/start-server.js",
-    "server:stop": "node scripts/stop-server.js",
-    "server:restart": "node scripts/restart-server.js",
-    "server:status": "node scripts/generate.js --health"
+    "dt": "node scripts/cli.js",
+    "gen": "node scripts/cli.js gen",
+    "config": "node scripts/cli.js config",
+    "server:start": "node scripts/cli.js server start",
+    "server:stop": "node scripts/cli.js server stop",
+    "server:restart": "node scripts/cli.js server restart",
+    "server:status": "node scripts/cli.js server status"
   },
   "keywords": [
     "drawthings",

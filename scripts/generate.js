@@ -17,7 +17,7 @@ const zlib = require('zlib');
 const logFile = path.join(__dirname, '..', 'logs', 'generate.log');
 const logStream = fs.createWriteStream(logFile, { flags: 'a' });
 const log = (msg) => {
-    const timestamp = new Date().toISOString();
+    const timestamp = new Date().toLocaleString();
     logStream.write(`[${timestamp}] ${msg}\n`);
 };
 const grpc = require('@grpc/grpc-js');
@@ -25,6 +25,7 @@ const protoLoader = require('@grpc/proto-loader');
 const flatbuffers = require('flatbuffers');
 const { PNG } = require('pngjs');
 const { program } = require('commander');
+const config = require('./config');
 
 // VTable slot indices for gRPC
 const slots = {
@@ -242,8 +243,8 @@ async function runGrpc(options, seed, outPath) {
     });
     const drawthings = grpc.loadPackageDefinition(packageDefinition);
     
-    // Auto-detect TLS from .env or options, default to true unless 'false'
-    const finalTls = options.tls || (process.env.DRAWTHINGS_USE_TLS !== 'false');
+    // Auto-detect TLS from config or options, default to true unless false
+    const finalTls = options.tls || (config.get('DRAWTHINGS_USE_TLS') !== false);
     
     let credentials;
     let clientOptions = {
@@ -320,7 +321,7 @@ async function runGrpc(options, seed, outPath) {
         console.log(`Using input resolution: ${finalWidth}x${finalHeight}`);
     }
 
-    const config = buildGenerationConfig(
+    const generationConfig = buildGenerationConfig(
         options.model, 
         finalWidth, 
         finalHeight, 
@@ -337,7 +338,7 @@ async function runGrpc(options, seed, outPath) {
     const request = {
         prompt: options.prompt, 
         negativePrompt: options.negativePrompt, 
-        configuration: config,
+        configuration: generationConfig,
         scaleFactor: upscaleFactor, 
         chunked: true, 
         device: "LAPTOP", 
@@ -395,23 +396,6 @@ async function runGrpc(options, seed, outPath) {
     });
 }
 
-// Basic .env parser for standalone use
-function loadEnv() {
-    const envPath = path.join(__dirname, '..', '.env');
-    if (!fs.existsSync(envPath)) return;
-    const content = fs.readFileSync(envPath, 'utf8');
-    content.split(/\r?\n/).forEach(line => {
-        line = line.trim();
-        if (!line || line.startsWith('#')) return;
-        const [key, ...valueParts] = line.split('=');
-        if (key && valueParts.length > 0) {
-            const value = valueParts.join('=').trim().replace(/^["'](.*)["']$/, '$1');
-            process.env[key.trim()] = value;
-        }
-    });
-}
-loadEnv();
-
 program
     .option('--prompt <text>', 'Prompt')
     .option('--negative-prompt <text>', 'Negative Prompt', '')
@@ -443,8 +427,13 @@ program
 const options = program.opts();
 
 async function main() {
+    // Show help if no prompt and not checking health or listing models
+    if (!options.prompt && !options.health && !options.listModels) {
+        program.help();
+    }
+
     console.log('DEBUG OPTIONS:', options);
-    const finalAddr = options.addr || process.env.DRAWTHINGS_SERVER_ADDR || '127.0.0.1:7859';
+    const finalAddr = options.addr || config.get('DRAWTHINGS_SERVER_ADDR') || '127.0.0.1:7859';
     options.addr = finalAddr;
 
     // --- Truncation Check ---
@@ -457,7 +446,7 @@ async function main() {
     if (options.health || options.listModels) {
         const packageDefinition = protoLoader.loadSync(path.join(__dirname, 'imageService.proto'), { keepCase: true });
         const drawthings = grpc.loadPackageDefinition(packageDefinition);
-        const finalTls = options.tls || (process.env.DRAWTHINGS_USE_TLS !== 'false');
+        const finalTls = options.tls || (config.get('DRAWTHINGS_USE_TLS') !== false);
         let credentials = finalTls ? grpc.credentials.createSsl(fs.readFileSync(path.join(__dirname, 'drawthings-ca.pem'))) : grpc.credentials.createInsecure();
         const client = new drawthings.ImageGenerationService(finalAddr, credentials);
         

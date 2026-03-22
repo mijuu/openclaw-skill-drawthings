@@ -24,30 +24,35 @@ This skill controls an external server. **Do not move or copy** these heavy asse
 ✅ **Pure Node.js**: High-performance gRPC implementation using `@grpc/grpc-js` and `pngjs`. No external dependencies other than the Draw Things server.
 ⚠️ **Note**: Ensure the server binary version is compatible with the `GenerateImage` method. Refer to `IMPLEMENTATION.md` for troubleshooting.
 
-## Getting Started
+## Configuration
 
-### 1. Prerequisites
--   **Draw Things**: Installed on macOS with models downloaded (~10GB+).
--   **Node.js**: Installed (version 16+ recommended).
--   **Dependencies**:
-    ```bash
-    npm install
-    ```
+The Draw Things skill uses a centralized configuration system. Settings are stored in `~/.drawthings-skill/config.json`.
 
-### 2. Start the External Server
-The server must be running to process requests. The `start-server` command references the external binary path.
+### 1. Initial Setup
+Run the setup command to configure your local paths:
 ```bash
-npm run start-server
+# Using global command (if linked)
+dt-skill config --server-path "/path/to/gRPCServerCLI-macOS" --models-path "~/Library/Containers/com.liuliu.draw-things/Data/Documents/Models"
+
+# Or using npm
+npm run dt -- config --server-path "/path/to/..."
 ```
 
-### 3. Generate Images
-Use the provided script to generate images from text prompts.
+### 2. View Configuration
 ```bash
-# Basic usage
-node scripts/generate.js --prompt "a serene mountain lake at sunrise" --output output.png
+dt-skill config --show
 ```
-# Advanced usage (Turbo model)
-node scripts/generate.js --prompt "cyberpunk city" --model z_image_turbo_1.0_q6p.ckpt --steps 8
+
+### 3. Server Control
+```bash
+dt-skill server start
+dt-skill server status
+dt-skill server stop
+```
+
+### 4. Generate Images
+```bash
+dt-skill gen --prompt "a serene mountain lake at sunrise" --output output.png
 ```
 
 ## Key Commands
