@@ -6,12 +6,13 @@ A high-performance Node.js skill for [OpenClaw](https://github.com/mijuu/opencla
 
 ## 🚀 Key Features
 
+- **Centralized CLI**: Powerful `dt-skill` command for generation, configuration, and server management.
+- **Auto-Discovery**: Automatically detects standard Draw Things model paths on macOS.
+- **Memory Optimized**: Efficient large image transfers (up to 4K/8K) with minimal memory footprint.
 - **Pure Node.js**: No Python or external image processing scripts required.
 - **High Performance**: Uses gRPC protocol for low-latency communication and efficient binary serialization (FlatBuffers).
 - **Secure**: Full support for SSL/TLS with integrated Draw Things Root CA.
 - **Fast Generation**: Optimized for "Turbo" models (e.g., SDXL Turbo, Flux) with real-time progress updates.
-- **Flexible Protocol**: Supports both gRPC (Port 7859) and HTTP (Port 7860).
-- **Comprehensive Control**: Full access to prompts, negative prompts, seeds, samplers, and model selection.
 
 ## 🛠️ Prerequisites
 
@@ -29,65 +30,66 @@ cd ~/.openclaw/skills
 git clone https://github.com/mijuu/openclaw-skill-drawthings.git drawthings
 cd drawthings
 npm install
+# Optional: Link the CLI globally
+npm link
 ```
 
 ## ⚙️ Configuration
 
-1. Copy the example environment file:
+The skill uses a centralized configuration system stored in `~/.drawthings-skill/config.json`.
+
+1. **Automatic Detection**: The skill automatically finds your Draw Things models if they are in the standard macOS location.
+2. **Manual Setup**: Run the doctor command to check your setup:
    ```bash
-   cp .env.example .env
+   dt-skill doctor
    ```
-2. Edit `.env` and configure your local paths:
-   - `DRAWTHINGS_SERVER_PATH`: Path to `gRPCServerCLI-macOS` (usually inside the App bundle or downloaded separately).
-   - `DRAWTHINGS_MODELS_PATH`: Path to your Draw Things models directory.
-   - `DRAWTHINGS_USE_TLS`: Set to `true` if you want to use encrypted connections (recommended).
+3. **Configure Paths**: If needed, set your gRPC server path:
+   ```bash
+   dt-skill config --server-path "/path/to/gRPCServerCLI-macOS"
+   ```
 
 ## 🚀 Usage
 
 ### 1. Start the Server
 
-You can start the gRPC server in two ways:
-
 #### Option A: Use Draw Things App (Easiest)
 1. Open **Draw Things** on your Mac.
 2. Go to **Settings** and enable **gRPC Server**.
-3. That's it! Your skill can now connect to this server (default `127.0.0.1:7859`).
 
-#### Option B: Use Command Line (Headless)
-If you prefer to run the server without the App UI, configure `DRAWTHINGS_SERVER_PATH` in `.env` and run:
-
+#### Option B: Use CLI (Headless)
 ```bash
-npm run start-server
+dt-skill server start
 ```
 
 ### 2. Generate Images
 
-Use the provided generation script:
-
 ```bash
 # Basic generation
-node scripts/generate.js --prompt "a serene mountain lake at sunrise" --output landscape.png
+dt-skill gen --prompt "a serene mountain lake at sunrise" --output landscape.png
 
-# Advanced usage (Turbo model)
-node scripts/generate.js --prompt "cyberpunk city" --model z_image_turbo_1.0_q6p.ckpt --steps 8 --tls
+# Advanced usage (Turbo model, 2x upscale)
+dt-skill gen --prompt "cyberpunk city" --model z_image_turbo_1.0_q6p.ckpt --steps 8 --upscale 2
 ```
 
-### 3. Check Health & Models
+### 3. Utility Commands
 
 ```bash
-# Check if server is responsive
-npm run health
+# Check server health
+dt-skill server status
 
 # List available models
-npm run models
+dt-skill models
+
+# Run diagnostics
+dt-skill doctor
 ```
 
 ## 📂 Project Structure
 
-- `scripts/generate.js`: Core generation logic and CLI.
-- `scripts/start-server.js`: Server management wrapper.
+- `scripts/cli.js`: Main entry point for `dt-skill`.
+- `scripts/generate.js`: Core generation logic.
+- `scripts/setup.js`: Configuration management.
 - `scripts/imageService.proto`: gRPC service definitions.
-- `scripts/drawthings-ca.pem`: Integrated Root CA for TLS.
 - `references/`: Detailed documentation on gRPC protocols and samplers.
 
 ## 🤝 Contributing
