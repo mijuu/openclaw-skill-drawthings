@@ -34,7 +34,7 @@ npm install -g @mijuu/drawthings
 对于 **OpenClaw** 用户，它作为一个标准技能运行：
 ```bash
 cd ~/.openclaw/skills
-git clone https://github.com/mijuu/openclaw-skill-drawthings.git drawthings
+git clone https://github.com/mijuu/drawthings-agent.git drawthings
 # 或通过 npm 安装
 mkdir drawthings && cd drawthings && npm install @mijuu/drawthings
 ```

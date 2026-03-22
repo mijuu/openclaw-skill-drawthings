@@ -34,7 +34,7 @@ Add this to your `claude_desktop_config.json`:
 For **OpenClaw** users, it works as a standard skill:
 ```bash
 cd ~/.openclaw/skills
-git clone https://github.com/mijuu/openclaw-skill-drawthings.git drawthings
+git clone https://github.com/mijuu/drawthings-agent.git drawthings
 # Or install via npm
 mkdir drawthings && cd drawthings && npm install @mijuu/drawthings
 ```
