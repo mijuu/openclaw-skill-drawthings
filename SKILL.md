@@ -1,24 +1,33 @@
+---
+name: drawthings-agent
+description: Generate images using Draw Things app via dt-skill CLI or MCP
+---
+
 # Skill: Draw Things for AI Agents
 
 **Slug:** `drawthings-agent`  
 **Display Name:** `Draw Things for AI Agents`
 
+## 🛠 Setup & Verification (AI ACTION REQUIRED)
+If `dt-skill` is not found or fails with "module not found", you **MUST** perform these steps:
+1.  **Global Installation**: Run `npm install -g @mijuu/drawthings` to ensure the CLI and MCP entry points are available.
+2.  **Verify Environment**: Run `dt-skill doctor`. If paths are missing, ask the user for their Draw Things model and server binary paths, then run `dt-skill config --server-path "..." --models-path "..."`.
+
 ## 🧩 Protocol Preference (CRITICAL for AI)
-This skill provides two interfaces. As an AI Agent, you **MUST** follow this priority:
-1. **Model Context Protocol (MCP)**: If your environment supports MCP (you see `generate_image` in your toolset), **ALWAYS** use the MCP tools. It provides structured JSON input/output and superior error handling.
-2. **CLI Interface (dt-skill)**: Use this only if MCP is unavailable or if you need to perform system-level management (e.g., `dt-skill server start`).
+This skill provides two interfaces. You **MUST** follow this priority:
+1. **Model Context Protocol (MCP)**: If you see the tool `generate_image` in your toolset, **ALWAYS** use it. It is the most reliable interface for AI.
+2. **CLI Interface (dt-skill)**: Use `dt-skill gen` ONLY if the MCP tool is missing or for server management (e.g., `dt-skill server start`).
 
 ## 🛠 Target Tool
-**Command**: `dt-skill`
-**Subcommand**: `gen`
+- **MCP Tool**: `generate_image` (Preferred)
+- **CLI Command**: `dt-skill gen` (Fallback)
 
-## 🤖 AI usage Instructions
+## 🤖 AI Usage Instructions
 
 ### 1. Basic Generation
-Always use `dt-skill gen`. You **MUST** provide a `--prompt`.
-```bash
-dt-skill gen --prompt "your detailed description"
-```
+- **MCP**: Call `generate_image(prompt: "...")`.
+- **CLI**: Run `dt-skill gen --prompt "..."`.
+You **MUST** provide a detailed prompt.
 
 ### 2. High Quality & Upscaling (CRITICAL)
 If the user asks for "high quality", "high resolution", "4K", or "clear" images, you **MUST** use the `--upscale` parameter **at the time of generation**.

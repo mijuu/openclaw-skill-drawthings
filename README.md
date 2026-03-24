@@ -31,12 +31,12 @@ Add this to your `claude_desktop_config.json`:
 ```
 
 ### 2. OpenClaw / Gemini CLI Skill
-For **OpenClaw** users, it works as a standard skill:
+For **OpenClaw** users, install the package in your skills directory:
 ```bash
 cd ~/.openclaw/skills
+# Recommended: If you want to use the repository for development:
 git clone https://github.com/mijuu/drawthings-agent.git drawthings
-# Or install via npm
-mkdir drawthings && cd drawthings && npm install @mijuu/drawthings
+cd drawthings && npm install
 ```
 
 ---
@@ -67,12 +67,11 @@ Install globally via npm:
 npm install -g @mijuu/drawthings
 ```
 
-Or install it as an OpenClaw skill:
+If you have cloned the repository for local development:
 
 ```bash
-mkdir -p ~/.openclaw/skills/drawthings
-cd ~/.openclaw/skills/drawthings
-npm install @mijuu/drawthings
+# Inside the project directory
+npm install
 ```
 
 After installation, the `dt-skill` command will be available.

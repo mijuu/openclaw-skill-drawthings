@@ -31,12 +31,12 @@ npm install -g @mijuu/drawthings
 ```
 
 ### 2. OpenClaw / Gemini CLI 技能
-对于 **OpenClaw** 用户，它作为一个标准技能运行：
+对于 **OpenClaw** 用户，在你的技能目录中安装：
 ```bash
 cd ~/.openclaw/skills
+# 推荐：如果你想使用仓库进行开发：
 git clone https://github.com/mijuu/drawthings-agent.git drawthings
-# 或通过 npm 安装
-mkdir drawthings && cd drawthings && npm install @mijuu/drawthings
+cd drawthings && npm install
 ```
 
 ---
@@ -47,7 +47,7 @@ mkdir drawthings && cd drawthings && npm install @mijuu/drawthings
 - **自动探测**：自动识别 macOS 上 Draw Things 的标准模型存储路径。
 - **内存优化**：针对 4K/8K 大图传输进行了深度优化，内存占用极低。
 - **纯 Node.js 实现**：无需 Python 或外部图像处理脚本。
-- **高性能**：采用 gRPC 协议进行低延迟通信，并使用 FlatBuffers 进行高效的二进制序列化。
+- **高性能**：采用 gRPC 协议进行 low-latency 通信，并使用 FlatBuffers 进行高效的二进制序列化。
 - **安全可靠**：全面支持 SSL/TLS 加密，并内置了 Draw Things 根证书（Root CA）。
 - **快速生成**：针对 "Turbo" 模型（如 SDXL Turbo, Flux）进行了优化，支持实时生成进度更新。
 
@@ -67,12 +67,11 @@ mkdir drawthings && cd drawthings && npm install @mijuu/drawthings
 npm install -g @mijuu/drawthings
 ```
 
-或者作为 OpenClaw 技能安装：
+如果你克隆了仓库进行本地开发：
 
 ```bash
-mkdir -p ~/.openclaw/skills/drawthings
-cd ~/.openclaw/skills/drawthings
-npm install @mijuu/drawthings
+# 在项目目录中执行
+npm install
 ```
 
 安装完成后，即可使用 `dt-skill` 命令。
